@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player - GIRLDLE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <div class="player-container">
+        <!-- Header -->
+        <div class="glass-card status-bar">
+            <div>
+                <h3>Team {{ user }}</h3>
+                <span id="game-phase" style="font-size: 0.8rem; color: var(--text-dim);">Waiting...</span>
+            </div>
+            <div class="score-display" id="my-score">0</div>
+        </div>
+
+        <!-- Action Area -->
+        <div id="guess-area" class="glass-card" style="display: none;">
+            <h3 style="margin-bottom: 1rem;">Make a Guess</h3>
+            <p id="guess-status" style="margin-bottom: 0.5rem; color: var(--text-dim);">It's guessing time!</p>
+            <div class="guess-input-group">
+                <input type="text" id="guess-input" placeholder="Enter Character Name">
+                <button onclick="submitGuess()" id="btn-submit">Submit Guess</button>
+                <button onclick="passGuess()" id="btn-pass" style="background: #444; font-size: 0.8rem;">Pass /
+                    Stop</button>
+            </div>
+        </div>
+
+        <div id="wait-area" class="glass-card" style="display: none; text-align: center;">
+            <h3 style="color: var(--accent);">Please Wait</h3>
+            <p id="wait-message" style="color: var(--text-dim);">Waiting for other players or next phase...</p>
+        </div>
+
+        <!-- Blanks / Solved List -->
+        <div class="glass-card">
+            <h3>Names List</h3>
+            <div id="names-list" style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        setInterval(fetchPlayerState, 2000);
+        fetchPlayerState();
+
+        let canGuess = false;
+
+        async function fetchPlayerState() {
+            try {
+                const res = await fetch('/api/player_state');
+                if (res.status === 401) window.location.href = '/login';
+                const data = await res.json();
+                renderPlayer(data);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderPlayer(data) {
+            document.getElementById('my-score').innerText = data.my_score;
+            document.getElementById('game-phase').innerText = `Phase: ${data.phase} | Round: ${data.round}`;
+
+            canGuess = data.can_guess && data.phase === 'GUESSING';
+
+            const guessArea = document.getElementById('guess-area');
+            const waitArea = document.getElementById('wait-area');
+            const waitMsg = document.getElementById('wait-message');
+
+            if (canGuess) {
+                guessArea.style.display = 'block';
+                waitArea.style.display = 'none';
+            } else {
+                guessArea.style.display = 'none';
+                waitArea.style.display = 'block';
+                if (data.phase === 'REVEAL') {
+                    waitMsg.innerText = "Admin is revealing a letter...";
+                } else if (data.phase === 'FINISHED') {
+                    waitMsg.innerText = "Game Finished!";
+                } else {
+                    waitMsg.innerText = "You have finished guessing for this round.";
+                }
+            }
+
+            // Render Names with numbers and proper spacing
+            const namesList = document.getElementById('names-list');
+            namesList.innerHTML = data.names.map(n => `
+                <div style="padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; display:flex; gap:10px; align-items:center; ${n.status === 'solved' ? 'border-left: 3px solid var(--success);' : 'border-left: 3px solid var(--secondary);'}">
+                    <span style="color:var(--accent); font-weight:bold; min-width:25px;">#${n.id}</span>
+                    <span style="font-family:'Courier New', monospace; white-space:pre; ${n.status === 'solved' ? 'color:var(--success);' : 'color:var(--text-dim);'}">${n.display}</span>
+                    ${n.status === 'solved' ? '<span style="color:var(--success); margin-left:auto;">✓</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        async function submitGuess() {
+            const input = document.getElementById('guess-input');
+            const val = input.value;
+            if (!val) return;
+
+            const res = await fetch('/api/guess', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guess: val })
+            });
+            const result = await res.json();
+
+            if (result.status === 'success') {
+                if (result.correct) {
+                    showToast(result.message, 'success');
+                    input.value = '';
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } else {
+                showToast(result.message, 'error');
+            }
+            fetchPlayerState();
+        }
+
+        async function passGuess() {
+            if (!confirm("Stop guessing for this round?")) return;
+            await fetch('/api/guess', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guess: "" }) // Empty guess = pass
+            });
+            fetchPlayerState();
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerText = msg;
+            container.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+    </script>
+</body>
+
+</html>

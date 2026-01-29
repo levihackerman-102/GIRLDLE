@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - GIRLDLE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="admin-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>GIRLDLE <span style="font-size: 0.6em; color: var(--accent);">Admin Panel</span></h1>
+            <div id="game-status" class="glass-card" style="padding: 0.5rem 1rem;">
+                Phase: <span id="display-phase">LOADING...</span> | Round: <span id="display-round">-</span>
+            </div>
+        </div>
+
+        <!-- Layout: Table on Left (2/3), Controls/Scores on Right (1/3) -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+
+            <!-- Main Table -->
+            <div class="glass-card" style="overflow-x: auto;">
+                <table class="game-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Year</th>
+                            <th>Winner Name</th>
+                            <th>Points</th>
+                            <th>Solved By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="names-table-body">
+                        <!-- JS populated -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sidebar -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+                <!-- Scores -->
+                <div class="glass-card">
+                    <h3>Team Scores</h3>
+                    <div id="scores-list" style="margin-top: 1rem;">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="glass-card">
+                    <h3>Game Controls</h3>
+                    <div id="reveal-controls" style="display: none; margin-top: 1rem;">
+                        <p style="margin-bottom: 0.5rem; color: var(--text-dim);">Reveal Phase: <span id="revealer-name"
+                                style="color: var(--accent); font-weight: bold;"></span>'s Turn</p>
+                        <input type="text" id="reveal-letter-input" maxlength="1"
+                            style="text-align: center; font-size: 1.5rem; width: 60px;">
+                        <button onclick="submitReveal()" style="width: 100%; margin-top: 0.5rem;">Reveal Letter</button>
+                    </div>
+
+                    <div id="guessing-controls" style="display: none; margin-top: 1rem;">
+                        <p style="margin-bottom: 0.5rem; color: var(--text-dim);">Guessing Phase</p>
+                        <button onclick="endRound()" style="width: 100%; background: #444;">End Round</button>
+                    </div>
+
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <button onclick="finishGame()"
+                            style="width: 100%; background: linear-gradient(90deg, #ff9966, #ff5e62);">Finish
+                            Game</button>
+                    </div>
+                </div>
+
+                <!-- Logs -->
+                <div class="glass-card" style="flex-grow: 1;">
+                    <h3>Activity Log</h3>
+                    <div id="activity-log" class="logs"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Score Modal -->
+    <div id="final-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-card">
+            <h2 style="color: var(--accent); margin-bottom: 1rem;">🏆 Game Finished! 🏆</h2>
+            <div id="final-stats">
+                <!-- Populated by JS -->
+            </div>
+            <button onclick="document.getElementById('final-modal').style.display='none'"
+                style="margin-top: 1.5rem;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Polling loop
+        setInterval(fetchState, 2000);
+        fetchState();
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                renderState(data);
+            } catch (e) {
+                console.error("Failed to fetch state", e);
+            }
+        }
+
+        function renderState(data) {
+            document.getElementById('display-phase').innerText = data.phase;
+            document.getElementById('display-round').innerText = data.round;
+
+            // Render Names Table - simplified: #, Year, Name, Points, Solved By
+            const tbody = document.getElementById('names-table-body');
+            tbody.innerHTML = '';
+            data.table.forEach(row => {
+                const year = row.date ? row.date.substring(0, 4) : '????';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: var(--accent); font-weight: bold;">${row.id}</td>
+                    <td>${year}</td>
+                    <td class="masked-name ${row.is_fully_revealed ? 'revealed' : ''}" style="white-space: pre;">${row.display}</td>
+                    <td>${row.current_points}</td>
+                    <td><div style="display:flex; gap:5px; flex-wrap:wrap;">
+                        ${row.solved_by.map(u => `<span style="background:var(--primary); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${u}</span>`).join('')}
+                    </div></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Render Scores (Raw)
+            const scoresDiv = document.getElementById('scores-list');
+            scoresDiv.innerHTML = Object.entries(data.scores)
+                .map(([team, score]) => `
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">
+                        <span>${team}</span>
+                        <span style="font-weight:bold; color:var(--accent);">${score}</span>
+                    </div>
+                `).join('');
+
+            // Controls Visibility
+            const revealPanel = document.getElementById('reveal-controls');
+            const guessPanel = document.getElementById('guessing-controls');
+
+            if (data.phase === 'REVEAL') {
+                revealPanel.style.display = 'block';
+                guessPanel.style.display = 'none';
+                document.getElementById('revealer-name').innerText = data.revealer;
+            } else if (data.phase === 'FINISHED') {
+                revealPanel.style.display = 'none';
+                guessPanel.style.display = 'none';
+                showFinalModal(data);
+            } else {
+                revealPanel.style.display = 'none';
+                guessPanel.style.display = 'block';
+            }
+
+            // Logs
+            const logDiv = document.getElementById('activity-log');
+            logDiv.innerHTML = data.logs.slice().reverse().map(l => `<div class="log-entry">${l}</div>`).join('');
+        }
+
+        // Ensure modal only shows once automatically or logic triggers
+        let matchEnded = false;
+        function showFinalModal(data) {
+            const statsDiv = document.getElementById('final-stats');
+
+            // Sort by Normalized Score
+            const sorted = Object.entries(data.normalized_scores).sort((a, b) => b[1] - a[1]);
+
+            let html = `<table style='width:100%; text-align:left; margin-top:1rem;'>
+                <tr><th>Team</th><th>Raw</th><th>Final (Norm)</th></tr>`;
+
+            sorted.forEach(([team, normScore]) => {
+                const raw = data.scores[team];
+                html += `<tr>
+                    <td style='padding:5px;'>${team}</td>
+                    <td style='color:var(--text-dim);'>${raw}</td>
+                    <td style='color:var(--success); font-weight:bold;'>${normScore}</td>
+                 </tr>`;
+            });
+            html += "</table>";
+            statsDiv.innerHTML = html;
+
+            if (!matchEnded) {
+                document.getElementById('final-modal').style.display = 'flex';
+                matchEnded = true;
+            }
+        }
+
+        async function submitReveal() {
+            const letter = document.getElementById('reveal-letter-input').value;
+            if (!letter) return;
+
+            await fetch('/api/admin/reveal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ letter })
+            });
+            document.getElementById('reveal-letter-input').value = '';
+            fetchState();
+        }
+
+        async function endRound() {
+            if (!confirm("Are you sure you want to end the guessing round?")) return;
+            await fetch('/api/admin/end_round', { method: 'POST' });
+            fetchState();
+        }
+
+        async function finishGame() {
+            if (!confirm("Are you sure you want to FINISH the game? This will reveal all names.")) return;
+            await fetch('/api/admin/finish', { method: 'POST' });
+            fetchState();
+        }
+    </script>
+</body>
+
+</html>
