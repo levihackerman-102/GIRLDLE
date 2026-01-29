@@ -77,7 +77,12 @@
             const waitArea = document.getElementById('wait-area');
             const waitMsg = document.getElementById('wait-message');
 
-            if (canGuess) {
+            // Check if player solved all 12 names
+            if (data.all_solved) {
+                guessArea.style.display = 'none';
+                waitArea.style.display = 'block';
+                waitMsg.innerHTML = '<span style="color:var(--success); font-size:1.2rem;">🎉 Finished! All names solved! 🎉</span>';
+            } else if (canGuess) {
                 guessArea.style.display = 'block';
                 waitArea.style.display = 'none';
             } else {

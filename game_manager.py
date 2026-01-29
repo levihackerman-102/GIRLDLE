@@ -183,25 +183,28 @@ class GameManager:
             # Incorrect
             self.state['guesses_pending'][username] = False
             self.save_state()
+            self.check_all_guessed()  # Auto-transition if everyone is done
             return {"status": "success", "message": "Incorrect guess. You are done for this round.", "correct": False}
 
     def skip_guess(self, username):
         # User might want to stop guessing voluntarily
         self.state['guesses_pending'][username] = False
         self.save_state()
+        self.check_all_guessed()  # Auto-transition if everyone is done
         return {"status": "success"}
 
     def check_all_guessed(self):
-        # If all teams have guesses_pending = False, round can end (or manual end)
-        # But wait, teams *start* with pending=True.
-        # If they guess correct, they stay pending=True.
-        # If they guess wrong, pending=False.
-        # If they voluntarily stop? Need a "Pass" button?
-        # User didn't explicitly ask for "Pass", but implied logic dictates it.
-        # "The client side panel ... will not proceed until each team has taken a guess"
-        # Since they can chain correct guesses, they must eventually fail or pass.
-        # I will add a "Done / Pass" button logic effectively handled by `guesses_pending`.
-        pass
+        """If all teams have finished guessing, automatically end the round."""
+        if self.state['phase'] != 'GUESSING':
+            return
+        
+        # Check if any team still has guesses pending
+        for pending in self.state['guesses_pending'].values():
+            if pending:
+                return  # At least one team can still guess
+        
+        # All teams are done, transition to REVEAL
+        self.admin_end_round()
 
     def admin_end_round(self):
         # Transition GUESSING -> REVEAL
@@ -319,20 +322,25 @@ class GameManager:
         
         # Player sees blanks AND their solved names
         player_names_view = []
+        solved_count = 0
         for n in self.state['names']:
             if username in n['solved_by']:
                 # Show the name if solved by this user
                 player_names_view.append({"id": n.get('id', 0), "display": n['name'], "status": "solved"})
+                solved_count += 1
             else:
                 # Show mask
                 player_names_view.append({"id": n.get('id', 0), "display": self.mask_name(n['name']), "status": "unsolved"})
+        
+        all_solved = solved_count == len(self.state['names'])
         
         return {
             "can_guess": self.state['guesses_pending'].get(username, False),
             "phase": self.state['phase'],
             "my_score": self.state['team_scores'].get(username, 0),
             "round": self.state['round_number'],
-            "names": player_names_view
+            "names": player_names_view,
+            "all_solved": all_solved
         }
 
     def validate_login(self, username, password):
