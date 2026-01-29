@@ -77,23 +77,27 @@
             const waitArea = document.getElementById('wait-area');
             const waitMsg = document.getElementById('wait-message');
 
-            // Check if player solved all 12 names
             if (data.all_solved) {
                 guessArea.style.display = 'none';
                 waitArea.style.display = 'block';
-                waitMsg.innerHTML = '<span style="color:var(--success); font-size:1.2rem;">🎉 Finished! All names solved! 🎉</span>';
+                waitMsg.innerText = "GIRLDLE Completed! You have solved all names! 🏆";
+                waitMsg.style.color = "var(--success)";
             } else if (canGuess) {
                 guessArea.style.display = 'block';
                 waitArea.style.display = 'none';
             } else {
                 guessArea.style.display = 'none';
                 waitArea.style.display = 'block';
+
                 if (data.phase === 'REVEAL') {
                     waitMsg.innerText = "Admin is revealing a letter...";
+                    waitMsg.style.color = "var(--text-dim)";
                 } else if (data.phase === 'FINISHED') {
                     waitMsg.innerText = "Game Finished!";
+                    waitMsg.style.color = "var(--text-dim)";
                 } else {
                     waitMsg.innerText = "You have finished guessing for this round.";
+                    waitMsg.style.color = "var(--text-dim)";
                 }
             }
 

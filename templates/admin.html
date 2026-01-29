@@ -136,6 +136,7 @@
             // Render Scores (Raw)
             const scoresDiv = document.getElementById('scores-list');
             scoresDiv.innerHTML = Object.entries(data.scores)
+                .sort((a, b) => b[1] - a[1]) // Sort desc
                 .map(([team, score]) => `
                     <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">
                         <span>${team}</span>

@@ -119,6 +119,23 @@ class GameManager:
         for n in self.state['names']:
             n['solved_at_round_start'] = len(n['solved_by'])
 
+    def has_completed_game(self, username):
+        """Check if a team has solved all names in the database."""
+        total_count = len(self.state['names'])
+        if total_count == 0:
+            return False
+        solved_count = sum(1 for n in self.state['names'] if username in n['solved_by'])
+        return solved_count >= total_count
+
+    def all_players_finished(self):
+        """Check if every team has completed the entire game."""
+        if not self.users:
+            return False
+        for u in self.users:
+            if not self.has_completed_game(u['username']):
+                return False
+        return True
+
     def mask_name(self, name):
         # Replace non-space, non-revealed chars with _
         # Also respect spaces.
@@ -177,7 +194,14 @@ class GameManager:
             name_id = match_found.get('id', '?')
             year = match_found.get('date', '????')[:4] # Extract year from "YYYY/MM/DD"
             self.log_event(f"Team {username} guessed #{name_id} ({year}) (+{points})")
+            
+            # Check if this team has solved ALL names
+            if self.has_completed_game(username):
+                self.state['guesses_pending'][username] = False
+                self.log_event(f"Team {username} has completed GIRLDLE!")
+
             self.save_state()
+            self.check_all_guessed() # Auto-transition if everyone is done
             return {"status": "success", "message": f"Correct! +{points} points.", "correct": True}
         else:
             # Incorrect
@@ -203,13 +227,19 @@ class GameManager:
             if pending:
                 return  # At least one team can still guess
         
+        # All teams are done for this round
+        # But if EVERYONE has finished the ENTIRE game, just finish
+        if self.all_players_finished():
+            self.finish_game()
+            return
+
         # All teams are done, transition to REVEAL
         self.admin_end_round()
 
     def admin_end_round(self):
         # Transition GUESSING -> REVEAL
         # Or finish game if max rounds
-        max_rounds = 7 # Variable "7 names guessing rounds"
+        max_rounds = 12 # 12 names in the list
         
         if self.state['phase'] == 'GUESSING':
             if self.state['round_number'] >= max_rounds:
@@ -250,12 +280,16 @@ class GameManager:
         # Advance revealer index
         self.state['revealer_index'] = (self.state['revealer_index'] + 1) % len(self.users)
         
-        # Reset guesses pending
-        self.state['guesses_pending'] = {u['username']: True for u in self.users}
+        # Reset guesses pending (only for those who haven't finished the entire game)
+        self.state['guesses_pending'] = {
+            u['username']: (not self.has_completed_game(u['username'])) 
+            for u in self.users
+        }
         
         self.log_event(f"Revealed letter: {letter}")
         self.snapshot_solve_counts() # Snapshot for new round
         self.save_state()
+        self.check_all_guessed() # Check if everyone is already done
         return {"status": "success"}
 
     def log_event(self, msg):
@@ -322,17 +356,17 @@ class GameManager:
         
         # Player sees blanks AND their solved names
         player_names_view = []
-        solved_count = 0
         for n in self.state['names']:
             if username in n['solved_by']:
                 # Show the name if solved by this user
                 player_names_view.append({"id": n.get('id', 0), "display": n['name'], "status": "solved"})
-                solved_count += 1
             else:
                 # Show mask
                 player_names_view.append({"id": n.get('id', 0), "display": self.mask_name(n['name']), "status": "unsolved"})
         
-        all_solved = solved_count == len(self.state['names'])
+        total_count = len(self.state['names'])
+        solved_count = sum(1 for n in self.state['names'] if username in n['solved_by'])
+        all_solved = solved_count >= total_count
         
         return {
             "can_guess": self.state['guesses_pending'].get(username, False),
