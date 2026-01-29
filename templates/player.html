@@ -30,8 +30,6 @@
             <div class="guess-input-group">
                 <input type="text" id="guess-input" placeholder="Enter Character Name">
                 <button onclick="submitGuess()" id="btn-submit">Submit Guess</button>
-                <button onclick="passGuess()" id="btn-pass" style="background: #444; font-size: 0.8rem;">Pass /
-                    Stop</button>
             </div>
         </div>
 
@@ -137,15 +135,7 @@
             fetchPlayerState();
         }
 
-        async function passGuess() {
-            if (!confirm("Stop guessing for this round?")) return;
-            await fetch('/api/guess', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ guess: "" }) // Empty guess = pass
-            });
-            fetchPlayerState();
-        }
+
 
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
