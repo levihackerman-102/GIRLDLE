@@ -1,12 +1,32 @@
 [
     {
-        "username": "p1",
+        "username": "Team_A",
         "rank": 1,
-        "password": "1"
+        "password": "kurolace"
     },
     {
-        "username": "p2",
+        "username": "Team_B",
         "rank": 2,
-        "password": "2"
+        "password": "aoistripes"
+    },
+    {
+        "username": "Team_C",
+        "rank": 3,
+        "password": "shiroredribbon"
+    },
+    {
+        "username": "Team_D",
+        "rank": 4,
+        "password": "gstring"
+    },
+    {
+        "username": "Team_E",
+        "rank": 5,
+        "password": "cyclingshorts"
+    },
+    {
+        "username": "Team_F",
+        "rank": 6,
+        "password": "commando"
     }
 ]
