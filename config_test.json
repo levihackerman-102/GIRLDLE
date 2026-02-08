@@ -1,1 +1,0 @@
-{"game_config": {"initial_points": 12, "normalized_max_score": 60, "min_points_cap": 1, "admin_password": "test"}, "users": [{"username": "p1", "password": "1", "priority": 1}, {"username": "p2", "password": "1", "priority": 2}]}

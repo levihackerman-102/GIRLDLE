@@ -4,6 +4,7 @@ import random
 
 DB_FILE = 'db.json'
 CONFIG_FILE = 'config.json'
+TEAMS_FILE = 'teams.json'
 
 class GameManager:
     def __init__(self):
@@ -14,8 +15,9 @@ class GameManager:
         with open(CONFIG_FILE, 'r') as f:
             data = json.load(f)
             self.config = data.get('game_config', {})
-            self.users = data.get('users', [])
-            self.users.sort(key=lambda u: u.get('ranking', 999))
+        with open(TEAMS_FILE, 'r') as f:
+            self.users = json.load(f)
+            self.users.sort(key=lambda u: u.get('rank', 999))
             # Map username to team data if needed, or just keep list
 
     def load_db(self):

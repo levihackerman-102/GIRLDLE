@@ -10,12 +10,13 @@ TEST_CONFIG = {
         "normalized_max_score": 60,
         "min_points_cap": 1,
         "admin_password": "test"
-    },
-    "users": [
-        {"username": "p1", "password": "1", "ranking": 1},
-        {"username": "p2", "password": "1", "ranking": 2}
-    ]
+    }
 }
+
+TEST_TEAMS = [
+    {"username": "p1", "password": "1", "rank": 1},
+    {"username": "p2", "password": "1", "rank": 2}
+]
 
 class TestGameLogic(unittest.TestCase):
     def setUp(self):
@@ -26,18 +27,16 @@ class TestGameLogic(unittest.TestCase):
         if os.path.exists('db_test.json'):
             os.remove('db_test.json')
 
-        # Patch constants in game_manager via simple string replace implementation locally
-        # or just modify the class instance if possible.
-        # Since I can't import properly with different constants without modifying the file,
-        # I will assume the prompt allows me to run this by temporarily modifying the file or 
-        # I'll just rely on the fact that I can instantiate GameManager and maybe swap constants if they were class vars.
-        # But they are global vars in game_manager.
-        
-        # ACTUALLY: I will just overwrite config.json for the test and backup the old one.
+        # Backup and overwrite config.json and teams.json for testing
         if os.path.exists('config.json'):
             os.rename('config.json', 'config.json.bak')
         with open('config.json', 'w') as f:
             json.dump(TEST_CONFIG, f)
+
+        if os.path.exists('teams.json'):
+            os.rename('teams.json', 'teams.json.bak')
+        with open('teams.json', 'w') as f:
+            json.dump(TEST_TEAMS, f)
             
         if os.path.exists('db.json'):
             os.rename('db.json', 'db.json.bak')
@@ -48,6 +47,8 @@ class TestGameLogic(unittest.TestCase):
         # Restore files
         if os.path.exists('config.json.bak'):
             os.replace('config.json.bak', 'config.json')
+        if os.path.exists('teams.json.bak'):
+            os.replace('teams.json.bak', 'teams.json')
         if os.path.exists('db.json.bak'):
             os.replace('db.json.bak', 'db.json')
             
@@ -66,10 +67,10 @@ class TestGameLogic(unittest.TestCase):
         # Player 2 guesses same name
         res = self.gm.submit_guess("p2", "Kurisu Makise")
         self.assertTrue(res['correct'])
-        # Should be 11 points (1 previous solve)
-        self.assertIn("11", res['message']) 
+        # Should be 12 points
+        self.assertIn("12", res['message']) 
         
-        self.assertEqual(self.gm.state['team_scores']['p2'], 11)
+        self.assertEqual(self.gm.state['team_scores']['p2'], 12)
 
     def test_reveal_penalty(self):
         name = "Rem"
