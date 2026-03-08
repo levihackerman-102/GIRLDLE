@@ -28,3 +28,7 @@ The application has been tested for 6 concurrent players, but it should support 
   - Set the `HOST` and `PORT` env vars if required
 
 Use gunicorn or something similar for production.
+
+---
+
+Written using Antigravity
