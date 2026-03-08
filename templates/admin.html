@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - GIRLDLE</title>
+    <title>Admin - {{ contest_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='fonts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -12,7 +12,7 @@
 <body>
     <div class="admin-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h1>GIRLDLE <span style="font-size: 0.6em; color: var(--accent);">Admin Panel</span></h1>
+            <h1>{{ contest_name }} <span style="font-size: 0.6em; color: var(--accent);">Admin Panel</span></h1>
             <div id="game-status" class="glass-card" style="padding: 0.5rem 1rem;">
                 Phase: <span id="display-phase">LOADING...</span> | Round: <span id="display-round">-</span>
             </div>

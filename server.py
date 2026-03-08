@@ -41,21 +41,21 @@ def login():
             session['role'] = 'admin'
             return redirect(url_for('admin_dashboard'))
             
-        return render_template('login.html', error="Invalid credentials")
+        return render_template('login.html', error="Invalid credentials", contest_name=gm.config.contest_name)
         
-    return render_template('login.html')
+    return render_template('login.html', contest_name=gm.config.contest_name)
 
 @app.route('/admin')
 def admin_dashboard():
     if session.get('role') != 'admin':
         return redirect(url_for('login'))
-    return render_template('admin.html')
+    return render_template('admin.html', contest_name=gm.config.contest_name)
 
 @app.route('/play')
 def player_dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
-    return render_template('player.html', user=session['user'])
+    return render_template('player.html', user=session['user'], contest_name=gm.config.contest_name)
 
 @app.route('/logout')
 def logout():

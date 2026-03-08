@@ -1,1 +1,32 @@
-[{"username": "p1", "password": "1", "rank": 1}, {"username": "p2", "password": "1", "rank": 2}]
+[
+    {
+        "username": "Team_A",
+        "password": "kurolace",
+        "order": 1
+    },
+    {
+        "username": "Team_B",
+        "password": "aoistripes",
+        "order": 2
+    },
+    {
+        "username": "Team_C",
+        "password": "shiroredribbon",
+        "order": 3
+    },
+    {
+        "username": "Team_D",
+        "password": "gstring",
+        "order": 4
+    },
+    {
+        "username": "Team_E",
+        "password": "cyclingshorts",
+        "order": 5
+    },
+    {
+        "username": "Team_F",
+        "password": "commando",
+        "order": 6
+    }
+]

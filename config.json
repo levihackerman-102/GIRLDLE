@@ -1,8 +1,14 @@
 {
     "game_config": {
+        "contest_name": "GIRLDLE",
+        // Maximum awardable points for a guess
+        // the points system is explained in the README
         "initial_points": 12,
+        // Points will not go below this
         "min_points_cap": 1,
+        // Username is `admin`
         "admin_password": "test",
+        // This key should be present in contest_data.csv
         "csv_key": "name"
     }
 }

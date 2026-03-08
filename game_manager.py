@@ -1,4 +1,5 @@
 import json
+import jstyleson
 import os
 import random
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ TEAMS_FILE = 'teams.json'
 
 @dataclass
 class GameConfig:
+    contest_name: str
     initial_points: int
     min_points_cap: int
     admin_password: str
@@ -16,7 +18,7 @@ class GameConfig:
 
     @classmethod
     def from_dict(cls, data: dict):
-        required_keys = ['initial_points', 'min_points_cap', 'admin_password', 'csv_key']
+        required_keys = ['contest_name', 'initial_points', 'min_points_cap', 'admin_password', 'csv_key']
         missing = [k for k in required_keys if k not in data]
         if missing:
             raise ValueError(f"Missing required game config keys: {missing}")
@@ -30,14 +32,14 @@ class GameManager:
 
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
-            data = json.load(f)
+            data = jstyleson.load(f)
             if 'game_config' not in data:
                  raise ValueError("game_config object is missing in config file")
             self.config = GameConfig.from_dict(data['game_config'])
             
         with open(TEAMS_FILE, 'r') as f:
             self.users = json.load(f)
-            self.users.sort(key=lambda u: u.get('rank', 999))
+            self.users.sort(key=lambda u: u.get('order', 999))
             # Map username to team data if needed, or just keep list
 
     def load_db(self):
@@ -234,7 +236,7 @@ class GameManager:
             # Check if this team has solved ALL names
             if self.has_completed_game(username):
                 self.state['guesses_pending'][username] = False
-                self.log_event(f"Team {username} has completed GIRLDLE!")
+                self.log_event(f"Team {username} has completed {self.config.contest_name}!")
 
             self.save_state()
             self.check_all_guessed() # Auto-transition if everyone is done

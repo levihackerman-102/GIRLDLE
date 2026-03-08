@@ -6,6 +6,7 @@ from game_manager import GameManager
 # Setup dummy config for testing
 TEST_CONFIG = {
     "game_config": {
+        "contest_name": "TEST MATCH",
         "initial_points": 12,
         "min_points_cap": 1,
         "admin_password": "test",
@@ -14,8 +15,8 @@ TEST_CONFIG = {
 }
 
 TEST_TEAMS = [
-    {"username": "p1", "password": "1", "rank": 1},
-    {"username": "p2", "password": "1", "rank": 2}
+    {"username": "p1", "password": "1", "order": 1},
+    {"username": "p2", "password": "1", "order": 2}
 ]
 
 TEST_CSV = [
