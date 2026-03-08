@@ -1,13 +1,13 @@
-name,year
-"Kurisu Makise",2014
-"Yukino Yukinoshita",2015
-"Mikoto Misaka",2016
-"Rin Tohsaka",2017
-"Rem",2018
-"Asuna Yuuki",2019
-"Kaguya Shinomiya",2020
-"Mai Sakurajima",2021
-"Ai Hayasaka",2022
-"Kurumi Tokisaki",2023
-"Holo",2024
-"Frieren",2025
+year,name
+2014,"Kurisu Makise"
+2015,"Yukino Yukinoshita"
+2016,"Mikoto Misaka"
+2017,"Rin Tohsaka"
+2018,"Rem"
+2019,"Asuna Yuuki"
+2020,"Kaguya Shinomiya"
+2021,"Mai Sakurajima"
+2022,"Ai Hayasaka"
+2023,"Kurumi Tokisaki"
+2024,"Holo"
+2025,"Frieren"
