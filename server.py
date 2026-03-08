@@ -5,10 +5,11 @@ import os
 from datetime import timedelta
 
 app = Flask(__name__)
-# Use a static secret key so sessions survive server restarts
-app.secret_key = "super_secret_anime_key_detective"
 app.permanent_session_lifetime = timedelta(days=365)
 gm = GameManager()
+
+# Bind secret key dynamically from DB state so db wipes disconnect all old clients
+app.secret_key = gm.state['secret_key']
 
 # --- Routes ---
 
@@ -120,6 +121,7 @@ def reveal():
     return jsonify(result)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    host = os.environ.get('HOST', '127.0.0.1')
-    app.run(host=host, port=port, debug=True)
+    port = gm.server_config.port
+    host = gm.server_config.host
+    debug_mode = gm.server_config.dev_mode
+    app.run(host=host, port=port, debug=debug_mode)

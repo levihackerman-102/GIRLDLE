@@ -2,6 +2,7 @@ import json
 import jstyleson
 import os
 import random
+import secrets
 from dataclasses import dataclass
 
 DB_FILE = 'db.json'
@@ -24,9 +25,24 @@ class GameConfig:
             raise ValueError(f"Missing required game config keys: {missing}")
         return cls(**{k: data[k] for k in required_keys})
 
+@dataclass
+class ServerConfig:
+    host: str
+    port: int
+    dev_mode: bool
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        required_keys = ['host', 'port', 'dev_mode']
+        missing = [k for k in required_keys if k not in data]
+        if missing:
+            raise ValueError(f"Missing required server config keys: {missing}")
+        return cls(**{k: data[k] for k in required_keys})
+
 class GameManager:
     def __init__(self):
         self.config: GameConfig = None # type: ignore
+        self.server_config: ServerConfig = None # type: ignore
         self.load_config()
         self.load_db()
 
@@ -35,7 +51,11 @@ class GameManager:
             data = jstyleson.load(f)
             if 'game_config' not in data:
                  raise ValueError("game_config object is missing in config file")
+            if 'server_config' not in data:
+                 raise ValueError("server_config object is missing in config file")
+                 
             self.config = GameConfig.from_dict(data['game_config'])
+            self.server_config = ServerConfig.from_dict(data['server_config'])
             
         with open(TEAMS_FILE, 'r') as f:
             self.users = json.load(f)
@@ -60,7 +80,8 @@ class GameManager:
                      "team_scores": {},
                      "guesses_pending": {},
                      "logs": [],
-                     "columns": []
+                     "columns": [],
+                     "secret_key": secrets.token_hex(24)
                 }
                 for k, v in defaults.items():
                     if k not in self.state:
@@ -85,7 +106,8 @@ class GameManager:
             "team_scores": {u['username']: 0 for u in self.users},
             "guesses_pending": {u['username']: True for u in self.users}, # Teams need to guess
             "logs": [],
-            "columns": []
+            "columns": [],
+            "secret_key": "dev_mode_static_key" if self.server_config.dev_mode else secrets.token_hex(24)
         }
         self.reset_names()
         self.snapshot_solve_counts() # Snapshot for round 1

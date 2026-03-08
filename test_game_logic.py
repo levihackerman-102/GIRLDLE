@@ -11,6 +11,11 @@ TEST_CONFIG = {
         "min_points_cap": 1,
         "admin_password": "test",
         "csv_key": "girl"
+    },
+    "server_config": {
+        "host": "127.0.0.1",
+        "port": 5000,
+        "dev_mode": False
     }
 }
 

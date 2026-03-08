@@ -10,5 +10,10 @@
         "admin_password": "test",
         // This key should be present in contest_data.csv
         "csv_key": "name"
+    },
+    "server_config": {
+        "host": "127.0.0.1",
+        "port": 5000,
+        "dev_mode": true
     }
 }

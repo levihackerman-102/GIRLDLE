@@ -25,7 +25,6 @@ The application has been tested for 6 concurrent players, but it should support 
 - Fill in `contest_data.csv`, `config.json` and `teams.json`.
 - Delete `db.json` to reset any previous game state.
 - Run `python server.py`
-  - Set the `HOST` and `PORT` env vars if required
 
 Use gunicorn or something similar for production.
 
