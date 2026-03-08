@@ -25,10 +25,9 @@
             <div class="glass-card" style="overflow-x: auto;">
                 <table class="game-table">
                     <thead>
-                        <tr>
+                        <tr id="names-table-header">
                             <th>#</th>
-                            <th>Year</th>
-                            <th>Winner Name</th>
+                            <!-- JS populated dynamic columns -->
                             <th>Points</th>
                             <th>Solved By</th>
                         </tr>
@@ -114,16 +113,36 @@
             document.getElementById('display-phase').innerText = data.phase;
             document.getElementById('display-round').innerText = data.round;
 
-            // Render Names Table - simplified: #, Year, Name, Points, Solved By
+            // Render Dynamic Headers
+            const thead = document.getElementById('names-table-header');
+            let headerHTML = `<th>#</th>`;
+            data.columns.forEach(col => {
+                if (col === data.csv_key) {
+                    headerHTML += `<th>NAME</th>`;
+                } else {
+                    headerHTML += `<th>${col.toUpperCase()}</th>`;
+                }
+            });
+            headerHTML += `<th>Points</th><th>Solved By</th>`;
+            thead.innerHTML = headerHTML;
+
+            // Render Names Table
             const tbody = document.getElementById('names-table-body');
             tbody.innerHTML = '';
             data.table.forEach(row => {
-                const year = row.date ? row.date.substring(0, 4) : '????';
+                let rowColsHTML = '';
+                data.columns.forEach(col => {
+                    if (col === data.csv_key) {
+                        rowColsHTML += `<td class="masked-name ${row.is_fully_revealed ? 'revealed' : ''}" style="white-space: pre;">${row.display}</td>`;
+                    } else {
+                        rowColsHTML += `<td>${row[col] || '????'}</td>`;
+                    }
+                });
+                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="color: var(--accent); font-weight: bold;">${row.id}</td>
-                    <td>${year}</td>
-                    <td class="masked-name ${row.is_fully_revealed ? 'revealed' : ''}" style="white-space: pre;">${row.display}</td>
+                    ${rowColsHTML}
                     <td>${row.current_points}</td>
                     <td><div style="display:flex; gap:5px; flex-wrap:wrap;">
                         ${row.solved_by.map(u => `<span style="background:var(--primary); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${u}</span>`).join('')}
@@ -171,17 +190,15 @@
             const statsDiv = document.getElementById('final-stats');
 
             // Sort by Normalized Score
-            const sorted = Object.entries(data.normalized_scores).sort((a, b) => b[1] - a[1]);
+            const sorted = Object.entries(data.scores).sort((a, b) => b[1] - a[1]);
 
             let html = `<table style='width:100%; text-align:left; margin-top:1rem;'>
-                <tr><th>Team</th><th>Raw</th><th>Final (Norm)</th></tr>`;
+                <tr><th>Team</th><th>Score</th></tr>`;
 
-            sorted.forEach(([team, normScore]) => {
-                const raw = data.scores[team];
+            sorted.forEach(([team, rawScore]) => {
                 html += `<tr>
                     <td style='padding:5px;'>${team}</td>
-                    <td style='color:var(--text-dim);'>${raw}</td>
-                    <td style='color:var(--success); font-weight:bold;'>${normScore}</td>
+                    <td style='color:var(--success); font-weight:bold;'>${rawScore}</td>
                  </tr>`;
             });
             html += "</table>";

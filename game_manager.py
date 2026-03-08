@@ -1,20 +1,40 @@
 import json
 import os
 import random
+from dataclasses import dataclass
 
 DB_FILE = 'db.json'
 CONFIG_FILE = 'config.json'
 TEAMS_FILE = 'teams.json'
 
+@dataclass
+class GameConfig:
+    initial_points: int
+    min_points_cap: int
+    admin_password: str
+    csv_key: str
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        required_keys = ['initial_points', 'min_points_cap', 'admin_password', 'csv_key']
+        missing = [k for k in required_keys if k not in data]
+        if missing:
+            raise ValueError(f"Missing required game config keys: {missing}")
+        return cls(**{k: data[k] for k in required_keys})
+
 class GameManager:
     def __init__(self):
+        self.config: GameConfig = None # type: ignore
         self.load_config()
         self.load_db()
 
     def load_config(self):
         with open(CONFIG_FILE, 'r') as f:
             data = json.load(f)
-            self.config = data.get('game_config', {})
+            if 'game_config' not in data:
+                 raise ValueError("game_config object is missing in config file")
+            self.config = GameConfig.from_dict(data['game_config'])
+            
         with open(TEAMS_FILE, 'r') as f:
             self.users = json.load(f)
             self.users.sort(key=lambda u: u.get('rank', 999))
@@ -37,7 +57,8 @@ class GameManager:
                      "revealed_letters": [],
                      "team_scores": {},
                      "guesses_pending": {},
-                     "logs": []
+                     "logs": [],
+                     "columns": []
                 }
                 for k, v in defaults.items():
                     if k not in self.state:
@@ -61,39 +82,46 @@ class GameManager:
             "revealed_letters": [],
             "team_scores": {u['username']: 0 for u in self.users},
             "guesses_pending": {u['username']: True for u in self.users}, # Teams need to guess
-            "logs": []
+            "logs": [],
+            "columns": []
         }
         self.reset_names()
         self.snapshot_solve_counts() # Snapshot for round 1
         self.save_state()
 
     def reset_names(self):
-        # Hardcoded list based on research, with contest metadata
-        contest_data = [
-            {"name": "Kurisu Makise", "contest": "Best Girl", "date": "2014/07/20", "creator": "/u/Jordy56", "responses": 12127},
-            {"name": "Yukino Yukinoshita", "contest": "Best Girl 2", "date": "2015/08/05", "creator": "/u/Jordy56", "responses": 17477},
-            {"name": "Mikoto Misaka", "contest": "Best Girl 3", "date": "2016/07/04", "creator": "/u/ShaKing807", "responses": 12875},
-            {"name": "Rin Tohsaka", "contest": "Best Girl 4", "date": "2017/07/08", "creator": "/u/ShaKing807", "responses": 21668},
-            {"name": "Rem", "contest": "Best Girl 5", "date": "2018/07/19", "creator": "/u/ShaKing807", "responses": 24793},
-            {"name": "Asuna Yuuki", "contest": "Best Girl 6", "date": "2019/07/12", "creator": "/u/ShaKing807", "responses": 18933},
-            {"name": "Kaguya Shinomiya", "contest": "Best Girl 7", "date": "2020/07/20", "creator": "/u/ShaKing807", "responses": 20578},
-            {"name": "Mai Sakurajima", "contest": "Best Girl 8", "date": "2021/07/16", "creator": "/u/mpp00", "responses": 11044},
-            {"name": "Ai Hayasaka", "contest": "Best Girl 9", "date": "2022/07/19", "creator": "/u/mpp00", "responses": 10409},
-            {"name": "Kurumi Tokisaki", "contest": "Best Girl 10", "date": "2023/07/30", "creator": "/u/mpp00", "responses": 12166},
-            {"name": "Holo", "contest": "Best Girl 11", "date": "2024/07/18", "creator": "/u/mpp00", "responses": 3319},
-            {"name": "Frieren", "contest": "Best Girl 12", "date": "2025/08/14", "creator": "/u/changshiyixia", "responses": 3991},
-        ]
+        import csv
+        
+        csv_key = self.config.csv_key
+        
         self.state['names'] = []
-        for idx, item in enumerate(contest_data):
-            self.state['names'].append({
-                "id": idx + 1,  # 1-indexed number
-                "name": item['name'],
-                "contest": item['contest'],
-                "date": item['date'],
-                "creator": item['creator'],
-                "responses": item['responses'],
-                "solved_by": [],
-            })
+        if os.path.exists('contest_data.csv'):
+            with open('contest_data.csv', 'r') as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames:
+                    raise ValueError("contest_data.csv is empty or missing headers.")
+                if csv_key not in reader.fieldnames:
+                    raise ValueError(f"csv_key '{csv_key}' not found in contest_data.csv headers: {reader.fieldnames}")
+                
+                self.state['columns'] = list(reader.fieldnames)
+                    
+                for idx, row in enumerate(reader):
+                    if csv_key not in row:
+                        continue # Skip rows without the key
+                        
+                    name_obj = {
+                        "id": idx + 1,
+                        "name": row[csv_key],
+                        "solved_by": [],
+                    }
+                    
+                    # Store everything else as metadata
+                    for k, v in row.items():
+                        if k != csv_key and k != "id" and k != "name" and k != "solved_by":
+                            name_obj[k] = v
+                    
+                    self.state['names'].append(name_obj)
+                            
         self.save_state()
 
     def save_state(self):
@@ -101,8 +129,8 @@ class GameManager:
             json.dump(self.state, f, indent=2)
 
     def get_points_for_name(self, name_obj, use_snapshot=False):
-        initial = self.config.get('initial_points', 12)
-        min_cap = self.config.get('min_points_cap', 1)
+        initial = self.config.initial_points
+        min_cap = self.config.min_points_cap
         
         # Use snapshot from round start if available and requested
         if use_snapshot:
@@ -194,7 +222,13 @@ class GameManager:
             self.state['team_scores'][username] = self.state['team_scores'].get(username, 0) + points
             match_found['solved_by'].append(username)
             name_id = match_found.get('id', '?')
-            year = match_found.get('date', '????')[:4] # Extract year from "YYYY/MM/DD"
+            year = match_found.get('year', '')
+            if not year and 'date' in match_found:
+                year = match_found.get('date', '????')[:4] # Extract year from "YYYY/MM/DD"
+            
+            if not year:
+                year = "????"
+                
             self.log_event(f"Team {username} guessed #{name_id} ({year}) (+{points})")
             
             # Check if this team has solved ALL names
@@ -300,19 +334,12 @@ class GameManager:
         self.state['logs'] = self.state['logs'][-20:]
         
     def calculate_scores(self):
-        max_score_norm = self.config.get('normalized_max_score', 60)
-        # Assuming 144 is the max possible points. (12 names * 12 points = 144).
-        
         raw_scores = self.state['team_scores']
-        normalized_scores = {}
-        for k, v in raw_scores.items():
-            normalized_scores[k] = int(v * max_score_norm / 144)
-            
-        return raw_scores, normalized_scores
+        return raw_scores
 
     def get_public_state(self):
         # For Admin Display
-        raw_scores, normalized_scores = self.calculate_scores()
+        raw_scores = self.calculate_scores()
         
         display_names = []
         is_finished = self.state['phase'] == 'FINISHED'
@@ -322,27 +349,30 @@ class GameManager:
             # If finished, we just show the name? Or handled by frontend? 
             # User wants: "Finish game ... reveal all answers"
             
-            display_names.append({
+            display_obj = {
                 "id": n.get('id', 0),
                 "display": n['name'] if is_finished else masked,
                 "is_fully_revealed": is_finished or (n['name'].strip() == self.unmasked_name(n['name'])),
                 "solved_by": n['solved_by'],
-                # Use snapshot-based points during guessing so display matches what will be awarded
                 "current_points": self.get_points_for_name(n, use_snapshot=(self.state['phase'] == 'GUESSING')),
-                "contest": n.get('contest', ''),
-                "date": n.get('date', ''),
-                "creator": n.get('creator', ''),
-                "responses": n.get('responses', 0),
-            })
+            }
+            
+            # Add any other metadata from the csv to display_obj
+            for k, v in n.items():
+                if k not in ["id", "name", "solved_by", "solved_at_round_start"]:
+                    display_obj[k] = v
+                    
+            display_names.append(display_obj)
             
         return {
             "phase": self.state['phase'],
             "round": self.state['round_number'],
-            "scores": raw_scores, # Show RAW by default as requested
-            "normalized_scores": normalized_scores, # For final leaderboard
+            "scores": raw_scores,
             "table": display_names,
             "revealer": self.users[self.state['revealer_index']]['username'] if self.users else "",
-            "logs": self.state['logs']
+            "logs": self.state['logs'],
+            "columns": self.state.get('columns', []),
+            "csv_key": self.config.csv_key
         }
 
     def unmasked_name(self, name):

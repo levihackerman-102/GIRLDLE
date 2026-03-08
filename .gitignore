@@ -10,3 +10,6 @@ venv/
 
 # Game Data
 db.json
+
+config_test.json
+*.bak

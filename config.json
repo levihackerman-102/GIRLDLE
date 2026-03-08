@@ -1,8 +1,8 @@
 {
     "game_config": {
         "initial_points": 12,
-        "normalized_max_score": 60,
         "min_points_cap": 1,
-        "admin_password": "your_admin_password_here"
+        "admin_password": "test",
+        "csv_key": "name"
     }
 }

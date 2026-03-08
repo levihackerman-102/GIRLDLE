@@ -7,9 +7,9 @@ from game_manager import GameManager
 TEST_CONFIG = {
     "game_config": {
         "initial_points": 12,
-        "normalized_max_score": 60,
         "min_points_cap": 1,
-        "admin_password": "test"
+        "admin_password": "test",
+        "csv_key": "girl"
     }
 }
 
@@ -18,16 +18,22 @@ TEST_TEAMS = [
     {"username": "p2", "password": "1", "rank": 2}
 ]
 
+TEST_CSV = [
+    "girl,year",
+    '"Kurisu Makise",2014',
+    '"Rem",2018'
+]
+
 class TestGameLogic(unittest.TestCase):
     def setUp(self):
-        # Write test config and db
+        # Write test config, db and csv
         with open('config_test.json', 'w') as f:
             json.dump(TEST_CONFIG, f)
         
         if os.path.exists('db_test.json'):
             os.remove('db_test.json')
 
-        # Backup and overwrite config.json and teams.json for testing
+        # Backup and overwrite files for testing
         if os.path.exists('config.json'):
             os.rename('config.json', 'config.json.bak')
         with open('config.json', 'w') as f:
@@ -37,6 +43,11 @@ class TestGameLogic(unittest.TestCase):
             os.rename('teams.json', 'teams.json.bak')
         with open('teams.json', 'w') as f:
             json.dump(TEST_TEAMS, f)
+            
+        if os.path.exists('contest_data.csv'):
+            os.rename('contest_data.csv', 'contest_data.csv.bak')
+        with open('contest_data.csv', 'w') as f:
+            f.write("\n".join(TEST_CSV))
             
         if os.path.exists('db.json'):
             os.rename('db.json', 'db.json.bak')
@@ -49,6 +60,10 @@ class TestGameLogic(unittest.TestCase):
             os.replace('config.json.bak', 'config.json')
         if os.path.exists('teams.json.bak'):
             os.replace('teams.json.bak', 'teams.json')
+        if os.path.exists('contest_data.csv.bak'):
+            os.replace('contest_data.csv.bak', 'contest_data.csv')
+        elif os.path.exists('contest_data.csv'):
+            os.remove('contest_data.csv')
         if os.path.exists('db.json.bak'):
             os.replace('db.json.bak', 'db.json')
             

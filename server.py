@@ -15,6 +15,8 @@ gm = GameManager()
 @app.route('/')
 def index():
     if 'user' in session:
+        if session.get('role') == 'admin':
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('player_dashboard'))
     return redirect(url_for('login'))
 
@@ -32,7 +34,7 @@ def login():
             return redirect(url_for('player_dashboard'))
         
         # Check Admin Login
-        admin_pass = gm.config.get('admin_password', 'admin')
+        admin_pass = gm.config.admin_password
         if username == 'admin' and password == admin_pass:
             session.permanent = True
             session['user'] = 'admin'
